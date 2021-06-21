@@ -6,13 +6,12 @@ import 'package:record_play_video/video_view_page.dart';
 import 'package:video_player/video_player.dart';
 
 class PlayVideoAndRecord extends StatefulWidget {
-  PlayVideoAndRecord({Key? key, required this.title, required this.cameras})
-      : super(key: key);
+  PlayVideoAndRecord({
+    Key? key,
+    required this.cameras,
+  }) : super(key: key);
 
   final List<CameraDescription> cameras;
-
-  final String title;
-
   @override
   _PlayVideoAndRecordState createState() => _PlayVideoAndRecordState();
 }
@@ -20,8 +19,8 @@ class PlayVideoAndRecord extends StatefulWidget {
 class _PlayVideoAndRecordState extends State<PlayVideoAndRecord>
     with WidgetsBindingObserver, TickerProviderStateMixin {
   late VideoPlayerController _videoPlayerController;
-  late CameraController _cameraController;
   late ChewieController _chewieController;
+  late CameraController _cameraController;
   late Future<void> cameraValue;
   bool? isRecording;
   XFile? videoFile;
@@ -29,14 +28,21 @@ class _PlayVideoAndRecordState extends State<PlayVideoAndRecord>
   @override
   void initState() {
     WidgetsBinding.instance?.addObserver(this);
+    isRecording = false;
     _videoPlayerController = VideoPlayerController.network(
         "https://assets.mixkit.co/videos/preview/mixkit-a-girl-blowing-a-bubble-gum-at-an-amusement-park-1226-large.mp4");
-    isRecording = false;
+    _videoPlayerController.initialize().then((_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {});
+    });
     _cameraController = CameraController(
-      widget.cameras[1],
+      widget.cameras[0],
       ResolutionPreset.high,
       enableAudio: true,
     );
+    _cameraController.setFlashMode(FlashMode.off);
     cameraValue = _cameraController.initialize().then((_) {
       if (!mounted) {
         return;
@@ -46,25 +52,15 @@ class _PlayVideoAndRecordState extends State<PlayVideoAndRecord>
     super.initState();
   }
 
-  @override
-  void didChangeDependencies() {
-    print("[Thang] : aaaaaaaa");
-    onNewChewie(_videoPlayerController);
-
-    super.didChangeDependencies();
-  }
-
   void showInSnackBar(String message) {
-    // ignore: deprecated_member_use
-    _scaffoldKey.currentState?.showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
+    );
   }
 
   Future<void> startVideoRecording() async {
-    if (!_cameraController.value.isInitialized) {
-      showInSnackBar('Error: select a camera first.');
-      return;
-    }
-
     if (_cameraController.value.isRecordingVideo) {
       return;
     }
@@ -127,7 +123,8 @@ class _PlayVideoAndRecordState extends State<PlayVideoAndRecord>
       if (mounted) setState(() {});
       if (_cameraController.value.hasError) {
         showInSnackBar(
-            'Camera error ${_cameraController.value.errorDescription}');
+          'Camera error ${_cameraController.value.errorDescription}',
+        );
       }
     });
 
@@ -144,8 +141,7 @@ class _PlayVideoAndRecordState extends State<PlayVideoAndRecord>
 
   void onNewChewie(VideoPlayerController _videoPlayerController) async {
     _chewieController = ChewieController(
-      videoPlayerController: VideoPlayerController.network(
-          "https://assets.mixkit.co/videos/preview/mixkit-a-girl-blowing-a-bubble-gum-at-an-amusement-park-1226-large.mp4"),
+      videoPlayerController: _videoPlayerController,
     );
 
     try {
@@ -173,8 +169,6 @@ class _PlayVideoAndRecordState extends State<PlayVideoAndRecord>
     if (state == AppLifecycleState.inactive) {
       print("[Thang]: inactive");
 
-      _videoPlayerController.dispose();
-      _chewieController.dispose();
       _cameraController.dispose();
     } else if (state == AppLifecycleState.resumed) {
       print("[Thang]: resumed");
@@ -191,49 +185,52 @@ class _PlayVideoAndRecordState extends State<PlayVideoAndRecord>
     super.dispose();
   }
 
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
       body: Container(
         color: Colors.black,
         child: Stack(
           children: [
-            Container(
-              height: 250,
-              child: FutureBuilder(
-                future: cameraValue,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done) {
-                    return VideoPlayerWidget(
-                        videoPlayerController: _videoPlayerController);
-                  } else {
-                    return Center(child: CircularProgressIndicator());
-                  }
-                },
-              ),
-            ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Container(
-                width: double.infinity,
-                color: Colors.black.withOpacity(0.5),
-                child: IconButton(
-                  onPressed: _cameraController.value.isInitialized &&
-                          !_cameraController.value.isRecordingVideo
-                      ? onVideoRecordButtonPressed
-                      : onStopButtonPressed,
-                  icon: Icon(
-                    Icons.panorama_fish_eye,
-                  ),
-                  iconSize: 78,
-                  color: Colors.white,
-                ),
-              ),
+            FutureBuilder(
+              future: cameraValue,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.done) {
+                  return Column(
+                    children: [
+                      Flexible(
+                        child: AspectRatio(
+                          aspectRatio: 1 / 2,
+                          child: VideoPlayerWidget(
+                            videoPlayerController: _videoPlayerController,
+                            showControls: false,
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Container(
+                          width: double.infinity,
+                          color: Colors.black.withOpacity(0.5),
+                          child: IconButton(
+                            onPressed: _cameraController.value.isInitialized &&
+                                    !_cameraController.value.isRecordingVideo
+                                ? onVideoRecordButtonPressed
+                                : onStopButtonPressed,
+                            icon: Icon(
+                              Icons.panorama_fish_eye,
+                            ),
+                            iconSize: 78,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                } else {
+                  return Center(child: CircularProgressIndicator());
+                }
+              },
             ),
           ],
         ),

@@ -1,7 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:record_play_video/home_page.dart';
-import 'package:record_play_video/play_video_and_record.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,10 +21,11 @@ class App extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: PlayVideoAndRecord(
+      home: HomePage(
         title: 'Record',
         cameras: cameras,
       ),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

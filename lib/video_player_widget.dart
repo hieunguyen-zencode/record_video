@@ -4,10 +4,12 @@ import 'package:video_player/video_player.dart';
 
 class VideoPlayerWidget extends StatefulWidget {
   final VideoPlayerController videoPlayerController;
+  final bool showControls;
 
   const VideoPlayerWidget({
     Key? key,
     required this.videoPlayerController,
+    this.showControls = true,
   }) : super(key: key);
 
   @override
@@ -19,12 +21,12 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   @override
   void initState() {
     super.initState();
-
     _chewieController = ChewieController(
       videoPlayerController: widget.videoPlayerController,
       autoPlay: false,
       looping: false,
       autoInitialize: true,
+      showControls: widget.showControls,
       errorBuilder: (context, errorMessage) {
         return Center(
           child: Text(
